@@ -1,15 +1,19 @@
-# rag
-
-To install dependencies:
+To install dependencies, run:
 
 ```bash
-bun install
+npm install
 ```
 
-To run:
+To start the application, run:
 
 ```bash
-bun run index.ts
+npm start
 ```
 
-This project was created using `bun init` in bun v1.1.31. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Before running, create a `.env` file and add your Google API key:
+
+```
+GOOGLE_API_KEY=YOUR_API_KEY
+```
+
+Obtain your API key from [Google AI Studio](https://aistudio.google.com).
