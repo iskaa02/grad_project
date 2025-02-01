@@ -1,19 +1,14 @@
-To install dependencies, run:
+# Vercel AI SDK RAG Guide Starter Project
 
-```bash
-npm install
-```
+This is the starter project for the Vercel AI SDK [Retrieval-Augmented Generation (RAG) guide](https://sdk.vercel.ai/docs/guides/rag-chatbot).
 
-To start the application, run:
+In this project, you will build a chatbot that will only respond with information that it has within its knowledge base. The chatbot will be able to both store and retrieve information. This project has many interesting use cases from customer support through to building your own second brain!
 
-```bash
-npm start
-```
+This project will use the following stack:
 
-Before running, create a `.env` file and add your Google API key:
-
-```
-GOOGLE_API_KEY=YOUR_API_KEY
-```
-
-Obtain your API key from [Google AI Studio](https://aistudio.google.com).
+- [Next.js](https://nextjs.org) 14 (App Router)
+- [Vercel AI SDK](https://sdk.vercel.ai/docs)
+- [OpenAI](https://openai.com)
+- [Drizzle ORM](https://orm.drizzle.team)
+- [Postgres](https://www.postgresql.org/) with [ pgvector ](https://github.com/pgvector/pgvector)
+- [shadcn-ui](https://ui.shadcn.com) and [TailwindCSS](https://tailwindcss.com) for styling
