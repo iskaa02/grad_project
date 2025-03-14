@@ -3,8 +3,9 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { useChat } from "ai/react";
-import { BotIcon, PlusCircle } from "lucide-react"; // Import PlusCircle
+import { BotIcon, Loader, LoaderCircle, PlusCircle } from "lucide-react"; // Import PlusCircle
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 import {
   Dialog,
   DialogContent,
@@ -63,15 +64,15 @@ function ChatUI() {
                   : "me-auto ps-12"
               } max-w-fit`}
             >
-              <p>
+              <>
                 {m.content.length > 0 ? (
-                  m.content
+                  <Markdown>{m.content}</Markdown>
                 ) : (
                   <span className="italic font-light">
                     {"calling tool: " + m?.toolInvocations?.[0].toolName}
                   </span>
                 )}
-              </p>
+              </>
             </div>
           </div>
         ))}
@@ -233,8 +234,11 @@ function KnowledgeModal() {
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleAddContent}>
-            Add to Knowledge Base
+          <Button disabled={isLoading} type="button" onClick={handleAddContent}>
+            <span className={isLoading ? "invisible" : ""}>
+              Add to Knowledge Base
+            </span>
+            {isLoading && <Loader className="absolute animate-spin" />}
           </Button>
         </DialogFooter>
       </DialogContent>

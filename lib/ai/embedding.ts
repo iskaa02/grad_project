@@ -3,40 +3,20 @@ import { google } from "@ai-sdk/google";
 import { db } from "../db";
 import { cosineDistance, desc, gt, sql } from "drizzle-orm";
 import { embeddings } from "../db/schema/embeddings";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 const CHUNK_SIZE = 500; // Target chunk size in characters
-const embeddingModel = google.textEmbeddingModel("text-embedding-005");
-
-const generateChunks = (input: string): string[] => {
-  const sentences = input.trim().split(/(?<=[.!?])\s+/); // Split into sentences, keeping delimiters
-  const chunks: string[] = [];
-  let currentChunk = "";
-
-  for (const sentence of sentences) {
-    if (currentChunk.length + sentence.length + 1 <= CHUNK_SIZE) {
-      // Add sentence to current chunk
-      currentChunk += (currentChunk.length > 0 ? " " : "") + sentence;
-    } else {
-      // Current chunk is full, push it and start a new one
-      if (currentChunk.length > 0) {
-        chunks.push(currentChunk);
-      }
-      currentChunk = sentence;
-    }
-  }
-
-  // Add the last chunk if it's not empty
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
-
-  return chunks;
-};
+const CHUNK_OVERLAP = 50; // Target chunk size in characters
+const embeddingModel = google.textEmbeddingModel("text-embedding-004");
 
 export const generateEmbeddings = async (
   value: string,
 ): Promise<Array<{ embedding: number[]; content: string }>> => {
-  const chunks = generateChunks(value);
+  const textSplitter = new RecursiveCharacterTextSplitter({
+    chunkSize: CHUNK_SIZE,
+    chunkOverlap: CHUNK_OVERLAP,
+  });
+  const chunks = await textSplitter.splitText(value);
 
   console.log("Chunks:", chunks);
   const { embeddings } = await embedMany({
@@ -69,6 +49,6 @@ export const findRelevantContent = async (userQuery: string) => {
     .from(embeddings)
     .where(gt(similarity, 0.5))
     .orderBy((t) => desc(t.similarity))
-    .limit(4);
+    .limit(14);
   return similarGuides;
 };
