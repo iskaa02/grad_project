@@ -6,7 +6,7 @@ import { embeddings } from "../db/schema/embeddings";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 const CHUNK_SIZE = 500; // Target chunk size in characters
-const CHUNK_OVERLAP = 50; // Target chunk size in characters
+const CHUNK_OVERLAP = 25; // Target chunk overlap
 const embeddingModel = google.textEmbeddingModel("text-embedding-004");
 
 export const generateEmbeddings = async (

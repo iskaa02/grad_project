@@ -14,9 +14,6 @@ export const resources = pgTable("resources", {
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .default(sql`now()`),
 });
 
 // Schema for resources - used to validate API requests
@@ -25,7 +22,6 @@ export const insertResourceSchema = createSelectSchema(resources)
   .omit({
     id: true,
     createdAt: true,
-    updatedAt: true,
   });
 
 // Type for resources - used to type API request params and within Components

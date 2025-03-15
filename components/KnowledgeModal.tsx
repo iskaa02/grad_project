@@ -68,7 +68,7 @@ export function KnowledgeModal() {
           <PlusCircle className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Add to Knowledge Base</DialogTitle>
           <DialogDescription>
@@ -86,6 +86,7 @@ export function KnowledgeModal() {
               <Textarea
                 id="knowledge-text"
                 placeholder="Paste your text here..."
+                className="h-32"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
               />

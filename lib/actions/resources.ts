@@ -8,6 +8,7 @@ import {
 import { db } from "../db";
 import { generateEmbeddings } from "../ai/embedding";
 import { embeddings as embeddingsTable } from "../db/schema/embeddings";
+import { eq } from "drizzle-orm";
 
 export const createResource = async (input: NewResourceParams) => {
   try {
@@ -34,4 +35,12 @@ export const createResource = async (input: NewResourceParams) => {
       ? error.message
       : "Error, please try again.";
   }
+};
+
+export const getResources = async () => {
+  const res = await db.select().from(resources).execute();
+  return res;
+};
+export const deleteResource = async (id: string) => {
+  await db.delete(resources).where(eq(resources.id, id)).execute();
 };
