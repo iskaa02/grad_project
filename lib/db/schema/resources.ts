@@ -14,6 +14,8 @@ export const resources = pgTable("resources", {
   createdAt: timestamp("created_at")
     .notNull()
     .default(sql`now()`),
+
+  userId: varchar("user_id", { length: 191 }).notNull(),
 });
 
 // Schema for resources - used to validate API requests

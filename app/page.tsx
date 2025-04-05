@@ -1,29 +1,12 @@
 "use client";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Textarea } from "@/components/ui/textarea";
 import { useChat } from "ai/react";
-import { BotIcon, Loader, LoaderCircle, PlusCircle } from "lucide-react"; // Import PlusCircle
-import { useEffect, useRef, useState } from "react";
+import { BotIcon } from "lucide-react"; // Import PlusCircle
 import Markdown from "react-markdown";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { createResource } from "@/lib/actions/resources";
-import { KnowledgeModal } from "@/components/KnowledgeModal";
 import { ChatInput } from "@/components/ChatInput";
 import { SettingsModal } from "@/components/SettingsModal";
+import { SignedIn, UserButton } from "@clerk/nextjs";
 
 export default function Chat() {
   return <ChatUI />;
@@ -48,7 +31,11 @@ function ChatUI() {
 
   return (
     <>
-      <div className="px-4 py-4 fixed">
+      <div className="px-4 py-4 fixed flex items-center gap-4">
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
+
         <SettingsModal />
       </div>
       <div className="flex flex-col w-full px-4 py-12 h-full flex-1 min-h-screen max-w-4xl mx-auto">

@@ -1,9 +1,11 @@
 import { embed, embedMany } from "ai";
 import { google } from "@ai-sdk/google";
 import { db } from "../db";
-import { cosineDistance, desc, gt, sql } from "drizzle-orm";
+import { and, cosineDistance, desc, eq, gt, sql } from "drizzle-orm";
 import { embeddings } from "../db/schema/embeddings";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { resources } from "../db/schema/resources";
+import { auth } from "@clerk/nextjs/server";
 
 const CHUNK_SIZE = 500; // Target chunk size in characters
 const CHUNK_OVERLAP = 25; // Target chunk overlap
@@ -44,10 +46,16 @@ export const findRelevantContent = async (userQuery: string) => {
     embeddings.embedding,
     userQueryEmbedded,
   )})`;
+
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("You must be signed in");
+  }
   const similarGuides = await db
     .select({ name: embeddings.content, similarity })
     .from(embeddings)
-    .where(gt(similarity, 0.5))
+    .innerJoin(resources, eq(embeddings.id, resources.id))
+    .where(and(gt(similarity, 0.5), eq(resources.userId, userId)))
     .orderBy((t) => desc(t.similarity))
     .limit(14);
   return similarGuides;

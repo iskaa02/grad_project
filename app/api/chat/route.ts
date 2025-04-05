@@ -1,7 +1,5 @@
-import { createResource } from "@/lib/actions/resources";
 import { google } from "@ai-sdk/google";
 import { streamText, tool } from "ai";
-import { z } from "zod";
 import { findRelevantContent } from "@/lib/ai/embedding";
 
 // Allow streaming responses up to 30 seconds
