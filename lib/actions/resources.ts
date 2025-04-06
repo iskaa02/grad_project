@@ -20,7 +20,6 @@ export const createResource = async (input: NewResourceParams) => {
   try {
     const { content } = insertResourceSchema.parse(input);
     const embeddings = await generateEmbeddings(content);
-    console.log("Embeddings:", embeddings);
     await db.transaction(async (tx) => {
       const [resource] = await tx
         .insert(resources)

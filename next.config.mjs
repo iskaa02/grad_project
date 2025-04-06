@@ -1,6 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  serverExternalPackages: ["@electric-sql/pglite"],
-};
+const nextConfig = {};
 
 export default nextConfig;

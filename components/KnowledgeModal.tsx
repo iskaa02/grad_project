@@ -16,11 +16,11 @@ import {
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
-
-type KnowledgeModalProps = {};
+import { useAuth } from "@clerk/nextjs";
 
 export function KnowledgeModal() {
   const [open, setOpen] = useState(false);
+  const { userId } = useAuth();
   const [textInput, setTextInput] = useState("");
   const [fileContent, setFileContent] = useState<string | null>(null); // Store file content
   const [isLoading, setIsLoading] = useState(false);
@@ -39,11 +39,12 @@ export function KnowledgeModal() {
   const handleAddContent = () => {
     console.log("Adding content:", textInput, fileContent);
     setIsLoading(true);
+    if (!userId) return;
     if (fileContent) {
       setFileContent(null); // Clear file content after adding
     } else if (textInput) {
       console.log("Adding text:", textInput);
-      createResource({ content: textInput })
+      createResource({ content: textInput, userId })
         .then(() => {
           setIsLoading(false);
           setTextInput(""); // Clear text input after adding

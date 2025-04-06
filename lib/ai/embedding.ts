@@ -7,8 +7,8 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { resources } from "../db/schema/resources";
 import { auth } from "@clerk/nextjs/server";
 
-const CHUNK_SIZE = 500; // Target chunk size in characters
-const CHUNK_OVERLAP = 25; // Target chunk overlap
+const CHUNK_SIZE = 2000; // Target chunk size in characters
+const CHUNK_OVERLAP = 200; // Target chunk overlap
 const embeddingModel = google.textEmbeddingModel("text-embedding-004");
 
 export const generateEmbeddings = async (
@@ -20,7 +20,6 @@ export const generateEmbeddings = async (
   });
   const chunks = await textSplitter.splitText(value);
 
-  console.log("Chunks:", chunks);
   const { embeddings } = await embedMany({
     model: embeddingModel,
     values: chunks,
@@ -41,22 +40,24 @@ export const generateEmbedding = async (value: string): Promise<number[]> => {
 };
 
 export const findRelevantContent = async (userQuery: string) => {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error("You must be signed in");
+  }
+
   const userQueryEmbedded = await generateEmbedding(userQuery);
   const similarity = sql<number>`1 - (${cosineDistance(
     embeddings.embedding,
     userQueryEmbedded,
   )})`;
 
-  const { userId } = await auth();
-  if (!userId) {
-    throw new Error("You must be signed in");
-  }
   const similarGuides = await db
     .select({ name: embeddings.content, similarity })
     .from(embeddings)
-    .innerJoin(resources, eq(embeddings.id, resources.id))
-    .where(and(gt(similarity, 0.5), eq(resources.userId, userId)))
+    .innerJoin(resources, eq(embeddings.resourceId, resources.id))
+    .where(gt(similarity, 0.5))
     .orderBy((t) => desc(t.similarity))
     .limit(14);
+
   return similarGuides;
 };
