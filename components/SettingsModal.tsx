@@ -23,6 +23,7 @@ import {
 } from "./ui/table";
 import { deleteResource } from "@/lib/actions/resources";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Resource {
   id: string;
@@ -89,11 +90,15 @@ export function SettingsModal() {
   const [open, setOpen] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
   useEffect(() => {
-    getResources().then((data) => setResources(data));
+    getResources()
+      .then((data) => setResources(data))
+      .catch((error) => toast.error("Something went wrong" + error.messagee));
   }, [open]);
 
   const refetchResources = () => {
-    getResources().then((data) => setResources(data));
+    getResources()
+      .then((data) => setResources(data))
+      .catch((error) => toast.error("Something went wrong" + error.message));
   };
 
   return (

@@ -1,4 +1,7 @@
-import { createResource } from "@/lib/actions/resources";
+import {
+  createResourceFromText,
+  createResourceFromFile,
+} from "@/lib/actions/resources";
 import { Label } from "@radix-ui/react-label";
 import { PlusCircle, Loader } from "lucide-react";
 import { useState } from "react";
@@ -22,43 +25,49 @@ export function KnowledgeModal() {
   const [open, setOpen] = useState(false);
   const { userId } = useAuth();
   const [textInput, setTextInput] = useState("");
-  const [fileContent, setFileContent] = useState<string | null>(null); // Store file content
+  const [file, setFileContent] = useState<File | null>(null); // Store file content
   const [isLoading, setIsLoading] = useState(false);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFileContent(e.target?.result as string);
-      };
-      reader.readAsText(file);
+      setFileContent(file);
     }
   };
 
   const handleAddContent = () => {
-    console.log("Adding content:", textInput, fileContent);
+    console.log("Adding content:", textInput, file);
     setIsLoading(true);
     if (!userId) return;
-    if (fileContent) {
-      setFileContent(null); // Clear file content after adding
+    if (file) {
+      createResourceFromFile({ file })
+        .then((i) => {
+          console.log(i);
+        })
+        .catch((error) => {
+          toast.error("Failed to add content: " + error.message);
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setFileContent(null); // Clear file content after adding
+        });
     } else if (textInput) {
       console.log("Adding text:", textInput);
-      createResource({ content: textInput, userId })
+      createResourceFromText({ content: textInput })
         .then(() => {
-          setIsLoading(false);
           setTextInput(""); // Clear text input after adding
           setOpen(false);
         })
         .catch((error) => {
-          setIsLoading(false);
           setOpen(false);
           toast.error("Failed to add content: " + error.message);
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setOpen(false);
         });
     } else {
       toast.error("Please provide content to add.");
-
-      setIsLoading(false);
     }
   };
 
@@ -101,13 +110,13 @@ export function KnowledgeModal() {
                 type="file"
                 onChange={handleFileUpload}
               />
-              {fileContent && (
+              {file && (
                 <div className="mt-2 p-2 border rounded-md">
                   <p className="text-sm">File content preview:</p>
                   <pre className="text-xs whitespace-pre-wrap">
                     {/* Display a preview (first 500 chars for example) */}
-                    {fileContent.substring(0, 500)}
-                    {fileContent.length > 500 ? "..." : ""}
+                    {file.name.substring(0, 500)}
+                    {file.name.length > 500 ? "..." : ""}
                   </pre>
                 </div>
               )}
