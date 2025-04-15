@@ -13,6 +13,9 @@ import { getMessagesForChat } from "@/lib/actions/chats"; // Combined imports
 import { toast } from "sonner"; // For notifications
 import { nanoid } from "nanoid"; // For temporary IDs if needed
 import { fetchChats } from "@/lib/store/chat-history-store";
+import { SUPPORTED_MODELS } from "@/lib/ai/supported_models";
+
+// Define supported models (consider moving to a shared location)
 
 export default function ChatPage() {
   const router = useRouter();
@@ -26,13 +29,15 @@ export default function ChatPage() {
 
   const [sessionId, setSessionId] = useState(existingChatId || nanoid());
   const [dbError, setDbError] = useState<string | null>(null);
+  // Default to the first supported model
+  const [selectedModel, setSelectedModel] = useState(SUPPORTED_MODELS[0]);
 
   const {
     messages,
     stop,
     input,
     handleInputChange,
-    handleSubmit,
+    handleSubmit, // Rename to avoid conflict
     setMessages,
     isLoading: isAiLoading,
     error: aiError,
@@ -40,9 +45,10 @@ export default function ChatPage() {
     api: "/api/chat",
     id: sessionId, // Pass sessionId to useChat
     initialMessages: [],
-    // Send chatId in the body for explicit context, especially for new chats
+    // Send chatId and default model in the body
     body: {
       chatId: sessionId,
+      model: selectedModel, // Default model for requests
     },
     onError(error) {
       console.error("AI Error:", error);
@@ -95,6 +101,24 @@ export default function ChatPage() {
     }, 100);
   }, [messages, isAiLoading]); // Scroll on messages change or AI loading state change
 
+  // Wrapper handleSubmit to include the selected model in the request options
+  const superHandleSubmit = (
+    event: React.FormEvent<HTMLFormElement>,
+    model: string,
+  ) => {
+    // Update the model state for subsequent default requests if needed
+    if (SUPPORTED_MODELS.includes(model)) {
+      setSelectedModel(model);
+    }
+    // Pass the selected model in the options body for this specific submission
+    handleSubmit(event, {
+      body: {
+        model: model,
+        chatId: sessionId,
+      },
+    });
+  };
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
@@ -123,7 +147,7 @@ export default function ChatPage() {
 
           {/* Messages List */}
           {!dbError && (
-            <div className="flex flex-col gap-4 w-full">
+            <div className="flex flex-col gap-4 w-full mb-20">
               {messages.map((m) => (
                 <div key={m.id} className="flex flex-col">
                   {m.role === "assistant" && (
@@ -133,7 +157,6 @@ export default function ChatPage() {
                           <BotIcon className="size-5" />
                         </AvatarFallback>
                       </Avatar>
-                      {/* Added prose for better markdown formatting */}
                       <div className="bg-muted rounded-lg p-2 px-3 max-w-[80%] break-words prose dark:prose-invert prose-p:leading-relaxed prose-p:m-0 prose-headings:m-0">
                         <Markdown>{m.content}</Markdown>
                       </div>
@@ -141,7 +164,6 @@ export default function ChatPage() {
                   )}
                   {m.role === "user" && (
                     <div className="flex items-start justify-end gap-2 mb-1">
-                      {/* Added prose for better markdown formatting */}
                       <div className="bg-blue-500 text-white rounded-lg p-2 px-3 max-w-[80%] break-words prose dark:prose-invert prose-p:leading-relaxed prose-p:m-0 prose-headings:m-0">
                         <Markdown>{m.content}</Markdown>
                       </div>
@@ -172,7 +194,6 @@ export default function ChatPage() {
 
       {/* Input Area */}
       <div className="bg-background border-t">
-        {/* Apply sidebar padding only on larger screens if sidebar exists */}
         <div className="w-full p-4">
           {aiError && (
             <p className="text-destructive text-xs mb-2 px-1">
@@ -184,7 +205,7 @@ export default function ChatPage() {
             onStop={stop}
             input={input}
             handleInputChange={handleInputChange}
-            onSubmit={handleSubmit}
+            onSubmit={superHandleSubmit} // Pass the new wrapper function
           />
         </div>
       </div>
