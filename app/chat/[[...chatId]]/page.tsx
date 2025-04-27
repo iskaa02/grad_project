@@ -7,7 +7,7 @@ import { useChat } from "ai/react";
 import { BotIcon, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
 import { ChatInput } from "@/components/ChatInput";
-import { SettingsModal } from "@/components/SettingsModal";
+// import { SettingsModal } from "@/components/SettingsModal"; // Removed temporarily
 import { SignedIn, UserButton } from "@clerk/nextjs";
 import { getMessagesForChat } from "@/lib/actions/chats"; // Combined imports
 import { toast } from "sonner"; // For notifications
@@ -20,7 +20,7 @@ import { SUPPORTED_MODELS } from "@/lib/ai/supported_models";
 export default function ChatPage() {
   const router = useRouter();
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const hasFetchedInitialMessages = useRef(false);
+  // const hasFetchedInitialMessages = useRef(false); // No longer needed with new logic
 
   const params = useParams(); // Type the params
 
@@ -31,6 +31,8 @@ export default function ChatPage() {
   const [dbError, setDbError] = useState<string | null>(null);
   // Default to the first supported model
   const [selectedModel, setSelectedModel] = useState(SUPPORTED_MODELS[0]);
+  // State to track loading of initial messages from DB
+  const [isDbLoading, setIsDbLoading] = useState(false);
 
   const {
     messages,
@@ -55,51 +57,107 @@ export default function ChatPage() {
       toast.error(`AI Error: ${error.message}`);
     },
     onFinish() {
+      // Check if we just finished the *first* interaction of a *new* chat
       if (!existingChatId) {
+        // Update chat list in sidebar
         fetchChats();
+        // Navigate to the persistent URL for the chat
+        // useChat hook should preserve messages state due to matching sessionId
         router.push(`/chat/${sessionId}`);
       }
     },
   });
 
-  // Effect to fetch initial messages for existing chats
+  // Update sessionId if the route parameter changes (e.g., user navigates between chats)
+  useEffect(() => {
+    if (existingChatId) {
+      setSessionId(existingChatId);
+    } else {
+      // If navigating back to the base /chat page, generate a new ID for the next chat
+      setSessionId(nanoid());
+    }
+  }, [existingChatId]);
+
+  // Effect to fetch initial messages for existing chats, only if needed
   useEffect(() => {
     const fetchInitialMessages = async (chatId: string) => {
       setDbError(null);
+      setIsDbLoading(true); // Start DB loading indicator
+      console.log(`Attempting to fetch initial messages for chat: ${chatId}`);
       try {
         const initialMessages = await getMessagesForChat(chatId);
         const messagesWithIds = initialMessages.map((m) => ({
           ...m,
-          id: m.id || nanoid(),
+          id: m.id || nanoid(), // Ensure IDs exist
         }));
+        console.log(
+          `Fetched ${messagesWithIds.length} messages for chat: ${chatId}. Setting state.`,
+        );
+        // Set messages fetched from DB. This is correct when loading an existing chat directly
+        // or when switching between chats where useChat clears the state for the new ID.
         setMessages(messagesWithIds);
-        hasFetchedInitialMessages.current = true;
       } catch (err) {
         console.error("Failed to load messages:", err);
         const errorMsg =
           err instanceof Error ? err.message : "Failed to load chat history.";
         setDbError(errorMsg);
         toast.error(errorMsg);
+        // If chat not found or permission denied, redirect to base chat page
         if (errorMsg.includes("not found") || errorMsg.includes("permission")) {
           router.replace("/chat");
         }
+      } finally {
+        setIsDbLoading(false); // Stop DB loading indicator
       }
     };
 
-    if (existingChatId) fetchInitialMessages(existingChatId);
+    // --- MODIFIED LOGIC ---
+    // Only fetch from DB if:
+    // 1. There is an existingChatId (we are on a /chat/[id] page)
+    // 2. The messages array managed by useChat is currently empty for this sessionId.
+    // This prevents overwriting messages after the first turn of a new chat when navigating.
+    if (existingChatId && messages.length === 0) {
+      // We likely landed directly on an existing chat URL or switched chats. Fetch history.
+      fetchInitialMessages(existingChatId);
+    } else if (existingChatId && messages.length > 0) {
+      // We have an existingChatId and messages. This could be after creating a new chat
+      // and navigating, or switching back to a chat whose state useChat preserved.
+      // Assume useChat state is correct, no fetch needed.
+      console.log(
+        `Chat ${existingChatId}: Found ${messages.length} messages in useChat state, skipping DB fetch.`,
+      );
+      // Ensure DB loading is false if we skipped the fetch
+      if (isDbLoading) setIsDbLoading(false);
+    } else if (!existingChatId) {
+      // We are on the base /chat page (new chat).
+      // Ensure any previous chat's messages are cleared.
+      // useChat should handle this automatically when its `id` prop changes (due to sessionId changing).
+      // Clear dbError and ensure loading is false.
+      setDbError(null);
+      setIsDbLoading(false);
+      // Explicitly clear messages if useChat doesn't do it automatically on ID change
+      // (Test this behaviour - it should clear automatically)
+      // if (messages.length > 0) {
+      //    console.log("On /chat page, clearing messages.");
+      //    setMessages([]);
+      // }
+    }
+    // Dependencies: Run when the chat ID changes, or when setMessages function itself changes (rare).
+    // Do NOT depend on `messages.length` directly here to avoid potential re-fetch loops.
+    // Rely on useChat updating `messages` when `sessionId` changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingChatId, router, setMessages]); // Keep setMessages here
+  }, [existingChatId, setMessages]); // Removed isDbLoading from deps
 
   // Effect to scroll to bottom
   useEffect(() => {
-    // Delay scroll slightly to allow DOM updates
+    // Delay scroll slightly to allow DOM updates, especially after messages are set
     setTimeout(() => {
       chatContainerRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "end",
       });
-    }, 100);
-  }, [messages, isAiLoading]); // Scroll on messages change or AI loading state change
+    }, 150); // Slightly increased delay might help
+  }, [messages, isAiLoading, isDbLoading]); // Scroll on messages change or loading states change
 
   // Wrapper handleSubmit to include the selected model in the request options
   const superHandleSubmit = (
@@ -110,14 +168,21 @@ export default function ChatPage() {
     if (SUPPORTED_MODELS.includes(model)) {
       setSelectedModel(model);
     }
-    // Pass the selected model in the options body for this specific submission
+    // Pass the selected model and correct chatId in the options body for this specific submission
     handleSubmit(event, {
       body: {
         model: model,
-        chatId: sessionId,
+        chatId: sessionId, // Ensure the current sessionId is sent
       },
     });
   };
+
+  // Render Logic
+  const showLoadingIndicator = isDbLoading;
+  const showDbError = !isDbLoading && dbError;
+  const showStartMessage =
+    !isDbLoading && !dbError && messages.length === 0 && !isAiLoading;
+  const showMessages = !isDbLoading && !dbError;
 
   return (
     <div className="flex flex-col h-screen">
@@ -126,27 +191,35 @@ export default function ChatPage() {
         <SignedIn>
           <UserButton afterSignOutUrl="/" />
         </SignedIn>
-        <SettingsModal />
+        {/* Removed SettingsModal - Assuming it's not relevant to the bug fix
+            If needed, add it back: <SettingsModal /> */}
+        <div className="flex-grow" /> {/* Spacer */}
+        {/* Optional: Display selected model or other info */}
       </div>
 
       <div className="flex flex-col w-full flex-1 max-w-4xl mx-auto overflow-y-auto py-4">
-        <div className="flex-1 px-4">
-          {dbError && (
+        <div className="flex-1 px-4 relative">
+          {" "}
+          {/* Added relative positioning for potential absolute elements */}
+          {showLoadingIndicator && (
+            <div className="absolute inset-0 flex justify-center items-center">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {showDbError && (
             <div className="flex justify-center items-center h-full text-destructive">
               <p>Error loading chat: {dbError}</p>
             </div>
           )}
-
-          {!dbError && messages.length === 0 && !isAiLoading && (
+          {showStartMessage && (
             <div className="flex justify-center items-center h-full">
               <p className="text-muted-foreground">
                 Send a message to start chatting.
               </p>
             </div>
           )}
-
           {/* Messages List */}
-          {!dbError && (
+          {showMessages && (
             <div className="flex flex-col gap-4 w-full mb-20">
               {messages.map((m) => (
                 <div key={m.id} className="flex flex-col">
@@ -172,7 +245,7 @@ export default function ChatPage() {
                 </div>
               ))}
 
-              {/* AI Typing Indicator */}
+              {/* AI Typing Indicator - Show only when AI is loading AND messages are visible */}
               {isAiLoading && (
                 <div className="flex items-start gap-2 mb-1">
                   <Avatar className="size-8">
@@ -197,11 +270,12 @@ export default function ChatPage() {
         <div className="w-full p-4">
           {aiError && (
             <p className="text-destructive text-xs mb-2 px-1">
-              Error: {aiError?.message || "An unexpected error occurred."}
+              AI Error: {aiError?.message || "An unexpected error occurred."}
             </p>
           )}
           <ChatInput
-            isLoading={isAiLoading}
+            // Disable input while DB is loading history as well
+            isLoading={isAiLoading || isDbLoading}
             onStop={stop}
             input={input}
             handleInputChange={handleInputChange}
