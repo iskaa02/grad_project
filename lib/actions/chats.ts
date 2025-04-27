@@ -127,9 +127,29 @@ export const createChatSession = async (
       id: chatId,
       title: title,
     });
+
+    // 2. Insert the initial messages (which should just be the first user message in this case)
+    // Ensure your 'messages' schema has columns for id, chatId, role, and content
+    const messagesToInsert = initialMessages.map((msg) => ({
+      id: msg.id || nanoid(), // Use existing ID if available, otherwise generate
+      chatId: chatId, // Link message to the new chat
+      role: msg.role,
+      content: msg.content,
+      // Add other columns like createdAt, updatedAt if they exist in your schema
+    }));
+
+    if (messagesToInsert.length > 0) {
+      await db.insert(messages).values(messagesToInsert);
+    }
   } catch (error) {
-    console.error("Failed to create chat session:", error);
-    throw new Error("Failed to start a new chat session.");
+    console.error(
+      "Failed to create chat session or save initial message:",
+      error,
+    );
+    // You might want to throw a more specific error or handle differently
+    throw new Error(
+      "Failed to start a new chat session and save initial message.",
+    );
   }
 };
 
