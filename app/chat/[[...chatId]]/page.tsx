@@ -7,7 +7,7 @@ import { useChat } from "ai/react";
 import { BotIcon, Loader2 } from "lucide-react";
 import Markdown from "react-markdown";
 import { ChatInput } from "@/components/ChatInput";
-// import { SettingsModal } from "@/components/SettingsModal"; // Removed temporarily
+import { SettingsModal } from "@/components/SettingsModal"; // Removed temporarily
 import { SignedIn, UserButton } from "@clerk/nextjs";
 import { getMessagesForChat } from "@/lib/actions/chats"; // Combined imports
 import { toast } from "sonner"; // For notifications
@@ -191,16 +191,12 @@ export default function ChatPage() {
         <SignedIn>
           <UserButton afterSignOutUrl="/" />
         </SignedIn>
-        {/* Removed SettingsModal - Assuming it's not relevant to the bug fix
-            If needed, add it back: <SettingsModal /> */}
+        <SettingsModal />
         <div className="flex-grow" /> {/* Spacer */}
-        {/* Optional: Display selected model or other info */}
       </div>
 
       <div className="flex flex-col w-full flex-1 max-w-4xl mx-auto overflow-y-auto py-4">
         <div className="flex-1 px-4 relative">
-          {" "}
-          {/* Added relative positioning for potential absolute elements */}
           {showLoadingIndicator && (
             <div className="absolute inset-0 flex justify-center items-center">
               <Loader2 className="size-8 animate-spin text-muted-foreground" />
